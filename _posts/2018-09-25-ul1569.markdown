@@ -1,0 +1,39 @@
+---
+layout: post
+title:  "UL 1569 hook-up wire"
+category: "pvc"
+tags: PVC 
+---
+
+
+__Description:__
+
+* Tinned, annealed, stranded or solid copper conductor.
+* PVC indulation.
+* Rated temperature: 105℃, Rated voltage:300 Volts.
+* Uniform thickness of wire to ensure easy stripping and cutting.
+* Passes UL VW-1&amp;Cul FT1/FT2 vertical flame test.
+* Executive Standard:UL758, UL1581,CSA22.2 
+* Resistant acids,oil,aldalis,moisture and fungus. 
+
+__Application:__
+
+* For general pupose internal wiring of electronic and electrical equipment.
+
+![UL 1569]({{site.url}}/assets/images/single-conductor.jpg)
+
+AWG | Stranded | OD | Resistance at 20℃ Ω/Km
+:-: | :-: |  :-: |  :-: |  :-: 
+30 | 7/0.100 | 1.10 | 381.0
+28 | 7/0.127 | 1.20 | 239.0
+26 | 7/0.160 | 1.30 | 150.0
+24 | 11/0.16 | 1.40 | 94.2
+22 | 17/0.16 | 1.60 | 59.4
+20 | 26/0.16 | 1.80 | 36.7
+18 | 34/0.16 | 2.10 | 23.2
+16 | 16/0.25 | 2.40 | 14.6
+
+* tandard put-ups: 2000FT, 1000FT, 6100FT minimum ofr non-stock orders。
+* Avaliable in 10 standard color. 
+
+* Reference: [UL iQ Style Page : UL 1569 ](http://iq.ul.com/awm/stylepage.aspx?Style=1569)

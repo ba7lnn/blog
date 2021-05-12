@@ -1,0 +1,20 @@
+---
+layout: page
+title: About
+permalink: /about/
+---
+I am eddit a Department of Hook-up wire with [UL](http://www.ul.com) M.f.g,  My research focuses are Hook-up wire, Ex: UL1007, UL1015, UL3266, UL2725, UL1354, etc.
+
+
+我叫彭龙，目前在广东省东莞虎门，从事电线行业，目前掌握的技能，UL电子线相关安规，拖链电缆！
+
+
+You can find my website with hook-up wire:
+[Hingtak](http://www.hingtak.com)
+
+
+## Contact
+
+Mobile: +86 137 2586 0789
+
+Email: hingtak@hotmail.com
