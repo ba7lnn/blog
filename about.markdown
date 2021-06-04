@@ -7,6 +7,7 @@ I am eddit a Department of Hook-up wire with [UL](http://www.ul.com) M.f.g,  My 
 
 
 我叫彭龙，目前在广东省东莞虎门，从事电线行业，目前掌握的技能，UL电子线相关安规，拖链电缆！
+爱好：业余无线电
 
 
 You can find my website with hook-up wire:
@@ -17,4 +18,4 @@ You can find my website with hook-up wire:
 
 Mobile: +86 137 2586 0789
 
-Email: hingtak@hotmail.com
+Email: ba7lnn@foxmail.com
