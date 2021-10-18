@@ -1,8 +1,9 @@
 ---
 layout: post
 title:  "PVC, ul1095 hook-up wire"
-category: "pvc"
+category: "hookup-wire"
 tags: PVC HookUp-Wire
+# permalink: /ul/ul095/
 ---
 
 
@@ -17,7 +18,7 @@ tags: PVC HookUp-Wire
   <p>Application:<br />
 * For general pupose internal wiring of electronic and electrical equipment. <br />
 *　Cash register, timg_recording machines, Electronic and medical equiment. </p>
-  <p><img src="public/images/single-conductor.jpg" alt="UL 1095" class="img-responsive" /></p>
+  <p><img src="/assets/images/single-conductor.jpg" alt="UL 1095" class="img-responsive" /></p>
 <div class="table-responsive">
 <table border="0" cellpadding="5" cellspacing="1"  class="table table-bordered table-hover table-condensed">
   <tr>
