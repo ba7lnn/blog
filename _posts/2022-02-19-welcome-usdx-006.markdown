@@ -1,0 +1,734 @@
+---
+layout: post
+title:  "Welcome to USDX 006!"
+date:   2022-02-19 15:22:19 +0800
+categories: USDX
+---
+
+## USDX 原代码解读 .
+
+# 006
+
+```
+
+// CW Key-click shaping, ramping up/down amplitude with sample-interval of 60us. Tnx: Yves HB9EWY https://groups.io/g/ucx/message/5107
+const uint8_t ramp[] PROGMEM = { 255, 254, 252, 249, 245, 239, 233, 226, 217, 208, 198, 187, 176, 164, 152, 139, 127, 115, 102, 90, 78, 67, 56, 46, 37, 28, 21, 15, 9, 5, 2 }; // raised-cosine(i) = 255 * sq(cos(HALF_PI * i/32))
+
+void dummy()
+{
+}
+
+void dsp_tx_cw()
+{ // jitter dependent things first
+#ifdef KEY_CLICK
+  if(OCR1BL < lut[255]) { //check if already ramped up: ramp up of amplitude 
+     for(uint16_t i = 31; i != 0; i--) {   // soft rising slope against key-clicks
+        OCR1BL = lut[pgm_read_byte_near(ramp[i])];
+        delayMicroseconds(60);
+     }
+  }
+#endif // KEY_CLICK
+  OCR1BL = lut[255];
+  
+  process_minsky();
+  OCR1AL = (p_sin >> (16 - volume)) + 128;
+}
+
+void dsp_tx_am()
+{ // jitter dependent things first
+  ADCSRA |= (1 << ADSC);    // start next ADC conversion (trigger ADC interrupt if ADIE flag is set)
+  OCR1BL = amp;                        // submit amplitude to PWM register (actually this is done in advance (about 140us) of phase-change, so that phase-delays in key-shaping circuit filter can settle)
+  int16_t adc = ADC - 512; // current ADC sample 10-bits analog input, NOTE: first ADCL, then ADCH
+  int16_t in = (adc >> MIC_ATTEN);
+  in = in << (drive-4);
+  //static int16_t dc;
+  //dc += (in - dc) / 2;
+  //in = in - dc;     // DC decoupling
+  #define AM_BASE 32
+  in=max(0, min(255, (in + AM_BASE)));
+  amp=in;// lut[in];
+}
+
+void dsp_tx_fm()
+{ // jitter dependent things first
+  ADCSRA |= (1 << ADSC);    // start next ADC conversion (trigger ADC interrupt if ADIE flag is set)
+  OCR1BL = lut[255];                   // submit amplitude to PWM register (actually this is done in advance (about 140us) of phase-change, so that phase-delays in key-shaping circuit filter can settle)
+  si5351.SendPLLRegisterBulk();       // submit frequency registers to SI5351 over 731kbit/s I2C (transfer takes 64/731 = 88us, then PLL-loopfilter probably needs 50us to stabalize)
+  int16_t adc = ADC - 512; // current ADC sample 10-bits analog input, NOTE: first ADCL, then ADCH
+  int16_t in = (adc >> MIC_ATTEN);
+  in = in << (drive);
+  int16_t df = in;
+  si5351.freq_calc_fast(df);           // calculate SI5351 registers based on frequency shift and carrier frequency
+}
+
+#define EA(y, x, one_over_alpha)  (y) = (y) + ((x) - (y)) / (one_over_alpha); // exponental averaging [Lyons 13.33.1]
+#define MLEA(y, x, L, M)  (y)  = (y) + ((((x) - (y)) >> (L)) - (((x) - (y)) >> (M))); // multiplierless exponental averaging [Lyons 13.33.1], with alpha=1/2^L - 1/2^M
+
+#ifdef SWR_METER
+volatile uint8_t swrmeter = 1;
+#endif
+
+const char m2c[] PROGMEM = "~ ETIANMSURWDKGOHVF*L*PJBXCYZQ**54S3***2**+***J16=/***H*7*G*8*90************?_****\"**.****@***'**-********;!*)*****,****:****";
+
+#ifdef CW_MESSAGE
+#define MENU_STR  1
+
+uint8_t delayWithKeySense(uint32_t ms){
+  uint32_t event = millis() + ms;
+  for(; millis() < event;){
+    wdt_reset();
+    if(inv ^ digitalRead(BUTTONS) || !digitalRead(DAH) || !digitalRead(DIT)){
+      for(; inv ^ digitalRead(BUTTONS);) wdt_reset();  // wait until buttons released  
+      return 1;  // stop when button/key pressed
+    }
+  }
+  return 0;
+}
+#ifdef CW_MESSAGE_EXT
+char cw_msg[6][48] = { "CQ PE1NNN +", "CQ CQ DE PE1NNN PE1NNN +", "GE TKS 5NN 5NN NAME IS GUIDO GUIDO HW?", "FB RPTR TX 5W 5W ANT INV V 73 CUAGN", "73 TU E E", "PE1NNN" };
+#else
+char cw_msg[1][48] = { "CQ PE1NNN +" };
+#endif
+uint8_t cw_msg_interval = 5; // number of seconds CW message is repeated
+uint32_t cw_msg_event = 0;
+uint8_t cw_msg_id = 0; // selected message
+
+int cw_tx(char ch){    // Transmit message in CW
+  char sym;
+  for(uint8_t j = 0; (sym = pgm_read_byte_near(m2c + j)); j++){  // lookup msg[i] in m2c, skip if not found
+    if(sym == ch){  // found -> transmit CW character j
+      wdt_reset();
+      uint8_t k = 0x80; for(; !(j & k); k >>= 1); k >>= 1; // shift start of cw code to MSB
+      if(k == 0) delay(ditTime * 4); // space -> add word space
+      else {
+        for(; k; k >>= 1){ // send dit/dah one by one, until everythng is sent
+          switch_rxtx(1);  // key-on  tx
+          if(delayWithKeySense(ditTime * ((j & k) ? 3 : 1))){ switch_rxtx(0); return 1; } // symbol: dah or dih length
+          switch_rxtx(0);  // key-off tx
+          if(delayWithKeySense(ditTime)) return 1;   // add symbol space
+        }
+        if(delayWithKeySense(ditTime * 2)) return 1; // add letter space
+      }
+      break; // next character
+    }
+  }
+  return 0;
+}
+
+int cw_tx(char* msg){
+  for(uint8_t i = 0; msg[i]; i++){  // loop over message
+    lcd.setCursor(0, 0); lcd.print(i); lcd.print("    ");
+    if(cw_tx(msg[i])) return 1;
+  }
+  return 0;
+}
+#endif // CW_MESSAGE
+
+volatile uint8_t menumode = 0;  // 0=not in menu, 1=selects menu item, 2=selects parameter value
+
+#ifdef CW_DECODER
+volatile uint8_t cwdec = 1;
+static int32_t avg = 256;
+static uint8_t sym;
+static uint32_t amp32 = 0;
+volatile uint32_t _amp32 = 0;
+static char out[] = "                ";
+volatile uint8_t cw_event = false;
+
+void printsym(bool submit = true){
+  if(sym<128){ char ch=pgm_read_byte_near(m2c + sym); if(ch != '*'){
+#ifdef CW_INTERMEDIATE
+    out[15] = ch; cw_event = true; if(submit){ for(int i=0; i!=15;i++){ out[i]=out[i+1]; } out[15] = ' '; }   // update LCD, only shift when submit is true, otherwise update last char only
+#else
+    for(int i=0; i!=15;i++) out[i]=out[i+1]; out[15] = ch; cw_event = true;   // update LCD
+#endif
+  } }
+  if(submit) sym=1;
+}
+
+bool realstate = LOW;
+bool realstatebefore = LOW;
+bool filteredstate = LOW;
+bool filteredstatebefore = LOW;
+uint8_t nbtime = 16;  // 6 // ms noise blanker
+uint32_t starttimehigh;
+uint32_t highduration;
+uint32_t hightimesavg;
+uint32_t lowtimesavg;
+uint32_t startttimelow;
+uint32_t lowduration;
+uint32_t laststarttime = 0;
+uint8_t wpm = 25;
+
+inline void cw_decode()
+{
+  int32_t in = _amp32;
+  EA(avg, in, (1 << 8));
+  realstate = (in>(avg*1/2));  // threshold
+
+  // here we clean up the state with a noise blanker
+  if(realstate != realstatebefore){
+    laststarttime = millis();
+  }
+//#define NB_SCALED_TO_WPM    1   // Scales noise-blanker timing the actual CW speed; this should reduce errors from noise at low speeds; this may have side-effect with fast speed changes that fast CW will be filtered out
+#ifdef NB_SCALED_TO_WPM
+  if((millis() - laststarttime) > min(1200/(20*2), max(1200/(40*2), hightimesavg/6))){
+#else
+  if((millis() - laststarttime) > nbtime){
+#endif
+    if(realstate != filteredstate){
+      filteredstate = realstate;
+      //dec2();
+    }
+  } else avg += avg/100; // keep threshold above noise spikes (increase threshold with 1%)
+
+  dec2();
+  realstatebefore = realstate;
+}
+
+//#define NEW_CW  1   // CW decoder portions from by Hjalmar Skovholm Hansen OZ1JHM, source: http://www.skovholm.com/decoder11.ino
+#ifdef NEW_CW
+void dec2()
+{
+ // Then we do want to have some durations on high and low
+ if(filteredstate != filteredstatebefore){
+ if(menumode == 0){ lcd.noCursor(); lcd.setCursor(15, 1); lcd.print((filteredstate) ? 'R' : ' '); stepsize_showcursor(); }
+
+  if(filteredstate == HIGH){
+    starttimehigh = millis();
+    lowduration = (millis() - startttimelow);
+  }
+
+  if(filteredstate == LOW){
+    startttimelow = millis();
+    highduration = (millis() - starttimehigh);
+    if(highduration < (2*hightimesavg) || hightimesavg == 0){
+      hightimesavg = (highduration+hightimesavg+hightimesavg)/3;     // now we know avg dit time ( rolling 3 avg)
+    }
+    if(highduration > (5*hightimesavg)){
+      hightimesavg = highduration/3;     // if speed decrease fast ..      
+      //hightimesavg = highduration+hightimesavg;     // if speed decrease fast ..
+    }
+  }
+ }
+
+ // now we will check which kind of baud we have - dit or dah, and what kind of pause we do have 1 - 3 or 7 pause, we think that hightimeavg = 1 bit
+ if(filteredstate != filteredstatebefore){
+  if(filteredstate == LOW){  //// we did end a HIGH
+#define FAIR_WEIGHTING    1
+#ifdef FAIR_WEIGHTING
+    if(highduration < (hightimesavg + hightimesavg/2) && highduration > (hightimesavg*6/10)){ /// 0.6 filter out false dits
+#else
+    if(highduration < (hightimesavg*2) && highduration > (hightimesavg*6/10)){ /// 0.6 filter out false dits
+#endif
+      sym=(sym<<1)|(0);        // insert dit (0)
+    }
+#ifdef FAIR_WEIGHTING
+    if(highduration > (hightimesavg + hightimesavg/2) && highduration < (hightimesavg*6)){
+#else
+    if(highduration > (hightimesavg*2) && highduration < (hightimesavg*6)){
+#endif
+      sym=(sym<<1)|(1);        // insert dah (1)
+      wpm = (wpm + (1200/((highduration)/3) * 4/3))/2;
+    }
+  }
+ 
+   if(filteredstate == HIGH){  // we did end a LOW 
+     uint16_t lacktime = 10;
+     if(wpm > 25)lacktime=10; // when high speeds we have to have a little more pause before new letter or new word 
+     if(wpm > 30)lacktime=12;
+     if(wpm > 35)lacktime=15;
+
+#ifdef FAIR_WEIGHTING
+     if(lowduration > (hightimesavg*(lacktime*1/10)) && lowduration < hightimesavg*(lacktime*5/10)){ // letter space
+#else
+     if(lowduration > (hightimesavg*(lacktime*7/80)) && lowduration < hightimesavg*(lacktime*5/10)){ // letter space
+     //if(lowduration > (hightimesavg*(lacktime*2/10)) && lowduration < hightimesavg*(lacktime*5/10)){ // letter space
+#endif
+       printsym();
+   }
+   if(lowduration >= hightimesavg*(lacktime*5/10)){ // word space
+     printsym();
+     printsym();  // print space
+   }
+  }
+ }
+
+ // write if no more letters
+  if((millis() - startttimelow) > (highduration * 6) && (sym > 1)){
+    printsym();
+  }
+
+  filteredstatebefore = filteredstate;
+}
+
+#else // OLD_CW
+
+void dec2()
+{
+ if(filteredstate != filteredstatebefore){ // then we do want to have some durations on high and low
+  if(menumode == 0){ lcd.noCursor(); lcd.setCursor(15, 1); lcd.print((filteredstate) ? 'R' : ' '); stepsize_showcursor(); }
+
+  if(filteredstate == HIGH){
+    starttimehigh = millis();
+    lowduration = (millis() - startttimelow);
+    //highduration = 0;
+
+    if((sym > 1) && lowduration > (hightimesavg*2)/* && lowduration < hightimesavg*(5*lacktime)*/){ // letter space
+      printsym();
+      wpm = (1200/hightimesavg * 4/3);
+      //if(lowduration >= hightimesavg*(5)){ sym=1; printsym(); } // (print additional space) word space
+    }
+    if(lowduration >= hightimesavg*(5)){ sym=1; printsym(); } // (print additional space) word space
+  }
+
+  if(filteredstate == LOW){
+    startttimelow = millis();
+    highduration = (millis() - starttimehigh);
+    //lowduration = 0;
+    if(highduration < (2*hightimesavg) || hightimesavg == 0){
+      hightimesavg = (highduration+hightimesavg+hightimesavg)/3;     // now we know avg dit time (rolling 3 avg)
+    }
+    if(highduration > (5*hightimesavg)){
+      hightimesavg = highduration/3;     // if speed decrease fast ..      
+      //hightimesavg = highduration+hightimesavg;     // if speed decrease fast ..
+    }
+    if(highduration > (hightimesavg/2)){ sym=(sym<<1)|(highduration > (hightimesavg*2));       // dit (0) or dash (1)
+#if defined(CW_INTERMEDIATE) && !defined(OLED) && !defined(LCD_I2C) && (F_MCU >= 20000000)
+      printsym(false);
+#endif
+    }
+  }
+ }
+ 
+ if(((millis() - startttimelow) > hightimesavg*(6)) && (sym > 1)){
+ //if(((millis() - startttimelow) > hightimesavg*(12)) && (sym > 1)){
+   //if(sym == 2) sym = 1; else // skip E E E E E
+   printsym();  // write if no more letters
+   //sym=0; printsym(); // print special char
+   //startttimelow = millis();
+ }
+ 
+ filteredstatebefore = filteredstate;
+}
+#endif //OLD_CW
+#endif  //CW_DECODER
+
+#define F_SAMP_PWM (78125/1)
+//#define F_SAMP_RX 78125  // overrun, do not use
+#define F_SAMP_RX 62500
+//#define F_SAMP_RX 52083
+//#define F_SAMP_RX 44643
+//#define F_SAMP_RX 39062
+//#define F_SAMP_RX 34722
+//#define F_SAMP_RX 31250
+//#define F_SAMP_RX 28409
+#define F_ADC_CONV (192307/2)  //was 192307/1, but as noted this produces clicks in audio stream. Slower ADC clock cures this (but is a problem for VOX when sampling mic-input simulatanously).
+
+#ifdef FAST_AGC
+volatile uint8_t agc = 2;
+#else
+volatile uint8_t agc = 1;
+#endif
+volatile uint8_t nr = 0;
+volatile uint8_t att = 0;
+volatile uint8_t att2 = 2;  // Minimum att2 increased, to prevent numeric overflow on strong signals
+volatile uint8_t _init = 0;
+
+// Old AGC algorithm which only increases gain, but does not decrease it for very strong signals.
+// Maximum possible gain is x32 (in practice, x31) so AGC range is x1 to x31 = 30dB approx.
+// Decay time is fine (about 1s) but attack time is much slower than I like. 
+// For weak/medium signals it aims to keep the sample value between 1024 and 2048. 
+static int16_t gain = 1024;
+inline int16_t process_agc_fast(int16_t in)
+{
+  int16_t out = (gain >= 1024) ? (gain >> 10) * in : in;
+  int16_t accum = (1 - abs(out >> 10));
+  if((INT16_MAX - gain) > accum) gain = gain + accum;
+  if(gain < 1) gain = 1;
+  return out;
+}
+
+// Contribution by Alan, M0PUB: Experimental new AGC algorithm.
+// ASSUMES: Input sample values are constrained to a maximum of +/-4096 to avoid integer overflow in earlier
+// calculations.
+//
+// This algorithm aims to keep signals between a peak sample value of 1024 - 1536, with fast attack but slow
+// decay.
+//
+// The variable centiGain actually represents the applied gain x 128 - i.e. the numeric gain applied is centiGain/128
+//
+// Since the largest valid input sample has a value of +/- 4096, centiGain should never be less than 32 (i.e.
+// a 'gain' of 0.25). The maximum value for centiGain is 32767, and hence a gain of 255. So the AGC range
+// is 0.25:255, or approx. 60dB.
+//
+// Variable 'slowdown' allows the decay time to be slowed down so that it is not directly related to the value
+// of centiCount.
+
+static int16_t centiGain = 128;
+#define DECAY_FACTOR 400      // AGC decay occurs <DECAY_FACTOR> slower than attack.
+static uint16_t decayCount = DECAY_FACTOR;
+#define HI(x)  ((x) >> 8)
+#define LO(x)  ((x) & 0xFF)
+
+inline int16_t process_agc(int16_t in)
+{
+  static bool small = true;
+  int16_t out;
+
+  if(centiGain >= 128)
+    out = (centiGain >> 5) * in;         // net gain >= 1
+  else
+    out = (centiGain >> 2) * (in >> 3);  // net gain < 1
+  out >>= 2;
+
+  if(HI(abs(out)) > HI(1536)){
+    centiGain -= (centiGain >> 4);       // Fast attack time when big signal encountered (relies on CentiGain >= 16)
+  } else {
+    if(HI(abs(out)) > HI(1024))
+      small = false;
+    if(--decayCount == 0){               // But slow ramp up of gain when signal disappears
+      if(small){                         // 400 samples below lower threshold - increase gain
+        if(centiGain < (INT16_MAX-(INT16_MAX >> 4)))
+          centiGain += (centiGain >> 4);
+        else
+          centiGain = INT16_MAX;
+      }
+      decayCount = DECAY_FACTOR;
+      small = true;
+    }
+  }
+  return out;
+}
+
+inline int16_t process_nr_old(int16_t ac)
+{
+  ac = ac >> (6-abs(ac));  // non-linear below amp of 6; to reduce noise (switchoff agc and tune-up volume until noise dissapears, todo:extra volume control needed)
+  ac = ac << 3;
+  return ac;
+}
+
+inline int16_t process_nr_old2(int16_t ac)
+{  
+  static int16_t ea1;
+  //ea1 = MLEA(ea1, ac, 5, 6); // alpha=0.0156
+  ea1 = EA(ea1, ac, 64); // alpha=1/64=0.0156
+  //static int16_t ea2;
+  //ea2 = EA(ea2, ea1, 64); // alpha=1/64=0.0156
+ 
+  return ea1;
+}
+
+inline int16_t process_nr(int16_t in)
+{ 
+/*
+  static int16_t avg;
+  avg = EA(avg, abs(in), 64); // alpha=1/64=0.0156
+param_c = avg;
+*/
+
+/*
+  int32_t _avg = 64 * avg;
+//  if(_avg > 4) _avg = 4;  // clip
+//  uint16_t brs_avgsq = 1 << (_avg * _avg);
+  if(_avg > 14) _avg = 14;  // clip
+  uint16_t brs_avgsq = 1 << (_avg);
+
+  
+  int16_t inv_gain;
+  if(brs_avgsq > 1) inv_gain = brs_avgsq / (brs_avgsq - 1);  // = 1 / (1 - 1/(1 << (1*avg*avg)) );
+  else inv_gain = 32768;*/
+
+  static int16_t ea1;
+  ea1 = EA(ea1, in, 1 << (nr-1) );
+  //static int16_t ea2;
+  //ea2 = EA(ea2, ea1, inv_gain);
+
+  return ea1;
+}
+/*
+inline int16_t process_nr(int16_t in)
+{
+  // Exponential moving average and variance (Lyons 13.36.2)
+  param_b = EA(param_b, in, 1 << 4);  // avg
+  param_c = EA(param_c, (in - param_b) * (in - param_b), 1 << 4);  // variance
+}
+*/
+
+#define N_FILT 7
+//volatile uint8_t filt = 0;
+uint8_t prev_filt[] = { 0 , 4 }; // default filter for modes resp. CW, SSB
+
+/* basicdsp filter simulation:
+  samplerate=7812
+  za0=in
+  p1=slider1*10
+  p2=slider2*10
+  p3=slider3*10
+  p4=slider4*10
+  zb0=(za0+2*za1+za2)/2-(p1*zb1+p2*zb2)/16
+  zc0=(zb0+2*zb1+zb2)/4-(p3*zc1+p4*zc2)/16
+  zc2=zc1
+  zc1=zc0
+  zb2=zb1
+  zb1=zb0
+  za2=za1
+  za1=za0
+  out=zc0
+
+  samplerate=7812
+  za0=in
+  p1=slider1*100+100
+  p2=slider2*100
+  p3=slider3*100+100
+  p4=slider4*100
+  zb0=(za0+2*za1+za2)-(-p1*zb1+p2*zb2)/64
+  zc0=(zb0-2*zb1+zb2)/8-(-p3*zc1+p4*zc2)/64
+  zc2=zc1
+  zc1=zc0
+  zb2=zb1
+  zb1=zb0
+  za2=za1
+  za1=za0
+  out=zc0/8
+*/
+inline int16_t filt_var(int16_t za0)  //filters build with www.micromodeler.com
+{ 
+  static int16_t za1,za2;
+  static int16_t zb0,zb1,zb2;
+  static int16_t zc0,zc1,zc2;
+  
+  if(filt < 4)
+  {  // for SSB filters
+    // 1st Order (SR=8kHz) IIR in Direct Form I, 8x8:16
+    // M0PUB: There was a bug here, since za1 == zz1 at this point in the code, and the old algorithm for the 300Hz high-pass was:
+    //    za0=(29*(za0-zz1)+50*za1)/64;
+    //    zz2=zz1;
+    //    zz1=za0;
+    // After correction, this filter still introduced almost 6dB attenuation, so I adjusted the coefficients
+    static int16_t zz1,zz2;
+    //za0=(29*(za0-zz1)+50*za1)/64;                                //300-Hz
+    zz2=zz1;
+    zz1=za0;
+    //za0=(30*(za0-zz2)+0*zz1)/32;                                 //300-Hz with very steep roll-off down to 0 Hz
+    za0=(30*(za0-zz2)+25*zz1)/32;                                  //300-Hz
+
+    // 4th Order (SR=8kHz) IIR in Direct Form I, 8x8:16
+    switch(filt){
+      case 1: zb0=(za0+2*za1+za2)/2-(13*zb1+11*zb2)/16; break;   // 0-2900Hz filter, first biquad section
+      case 2: zb0=(za0+2*za1+za2)/2-(2*zb1+8*zb2)/16; break;     // 0-2400Hz filter, first biquad section
+      //case 3: zb0=(za0+2*za1+za2)/2-(4*zb1+2*zb2)/16; break;     // 0-2400Hz filter, first biquad section
+      case 3: zb0=(za0+2*za1+za2)/2-(0*zb1+4*zb2)/16; break;     //0-1800Hz  elliptic
+      //case 3: zb0=(za0+7*za1+za2)/16-(-24*zb1+9*zb2)/16; break;  //0-1700Hz  elliptic with slope
+    }
+  
+    switch(filt){
+      case 1: zc0=(zb0+2*zb1+zb2)/2-(18*zc1+11*zc2)/16; break;     // 0-2900Hz filter, second biquad section
+      case 2: zc0=(zb0+2*zb1+zb2)/4-(4*zc1+8*zc2)/16; break;       // 0-2400Hz filter, second biquad section
+      //case 3: zc0=(zb0+2*zb1+zb2)/4-(1*zc1+9*zc2)/16; break;       // 0-2400Hz filter, second biquad section
+      case 3: zc0=(zb0+2*zb1+zb2)/4-(0*zc1+4*zc2)/16; break;       //0-1800Hz  elliptic
+      //case 3: zc0=(zb0+zb1+zb2)/16-(-22*zc1+47*zc2)/64; break;   //0-1700Hz  elliptic with slope
+    }
+   /*switch(filt){
+      case 1: zb0=za0; break; //0-4000Hz (pass-through)
+      case 2: zb0=(10*(za0+2*za1+za2)+16*zb1-17*zb2)/32; break;    //0-2500Hz  elliptic -60dB@3kHz
+      case 3: zb0=(7*(za0+2*za1+za2)+48*zb1-18*zb2)/32; break;     //0-1700Hz  elliptic
+    }
+  
+    switch(filt){
+      case 1: zc0=zb0; break; //0-4000Hz (pass-through)
+      case 2: zc0=(8*(zb0+zb2)+13*zb1-43*zc1-52*zc2)/64; break;   //0-2500Hz  elliptic -60dB@3kHz
+      case 3: zc0=(4*(zb0+zb1+zb2)+22*zc1-47*zc2)/64; break;   //0-1700Hz  elliptic
+    }*/
+  
+    zc2=zc1;
+    zc1=zc0;
+  
+    zb2=zb1;
+    zb1=zb0;
+  
+    za2=za1;
+    za1=za0;
+    
+    return zc0;
+  } else { // for CW filters
+    //   (2nd Order (SR=4465Hz) IIR in Direct Form I, 8x8:16), adding 64x front-gain (to deal with later division)
+//#define FILTER_700HZ   1
+#ifdef FILTER_700HZ
+    if(cw_tone == 0){
+      switch(filt){
+        case 4: zb0=(za0+2*za1+za2)/2+(41L*zb1-23L*zb2)/32; break;   //500-1000Hz
+        case 5: zb0=5*(za0-2*za1+za2)+(105L*zb1-58L*zb2)/64; break;   //650-840Hz
+        case 6: zb0=3*(za0-2*za1+za2)+(108L*zb1-61L*zb2)/64; break;   //650-750Hz
+        case 7: zb0=(2*za0-3*za1+2*za2)+(111L*zb1-62L*zb2)/64; break; //630-680Hz       
+        //case 4: zb0=(0*za0+1*za1+0*za2)+(28*zb1-14*zb2)/16; break; //600Hz+-250Hz
+        //case 5: zb0=(0*za0+1*za1+0*za2)+(28*zb1-15*zb2)/16; break; //600Hz+-100Hz
+        //case 6: zb0=(0*za0+1*za1+0*za2)+(27*zb1-15*zb2)/16; break; //600Hz+-50Hz
+        //case 7: zb0=(0*za0+1*za1+0*za2)+(27*zb1-15*zb2)/16; break; //630Hz+-18Hz
+      }
+    
+      switch(filt){
+        case 4: zc0=(zb0-2*zb1+zb2)/4+(105L*zc1-52L*zc2)/64; break;      //500-1000Hz
+        case 5: zc0=((zb0+2*zb1+zb2)+97L*zc1-57L*zc2)/64; break;      //650-840Hz
+        case 6: zc0=((zb0+zb1+zb2)+104L*zc1-60L*zc2)/64; break;       //650-750Hz
+        case 7: zc0=((zb1)+109L*zc1-62L*zc2)/64; break;               //630-680Hz
+        //case 4: zc0=(zb0-2*zb1+zb2)/1+(24*zc1-13*zc2)/16; break; //600Hz+-250Hz
+        //case 5: zc0=(zb0-2*zb1+zb2)/4+(26*zc1-14*zc2)/16; break; //600Hz+-100Hz
+        //case 6: zc0=(zb0-2*zb1+zb2)/16+(28*zc1-15*zc2)/16; break; //600Hz+-50Hz
+        //case 7: zc0=(zb0-2*zb1+zb2)/32+(27*zc1-15*zc2)/16; break; //630Hz+-18Hz
+      }
+    }
+    if(cw_tone == 1)
+#endif
+    {
+      switch(filt){
+        //case 4: zb0=(1*za0+2*za1+1*za2)+(90L*zb1-38L*zb2)/64; break; //600Hz+-250Hz
+        //case 5: zb0=(1*za0+2*za1+1*za2)/2+(102L*zb1-52L*zb2)/64; break; //600Hz+-100Hz
+        //case 6: zb0=(1*za0+2*za1+1*za2)/2+(107L*zb1-57L*zb2)/64; break; //600Hz+-50Hz
+        //case 7: zb0=(0*za0+1*za1+0*za2)+(110L*zb1-61L*zb2)/64; break; //600Hz+-25Hz
+        
+        case 4: zb0=(0*za0+1*za1+0*za2)+(114L*zb1-57L*zb2)/64; break; //600Hz+-250Hz
+        case 5: zb0=(0*za0+1*za1+0*za2)+(113L*zb1-60L*zb2)/64; break; //600Hz+-100Hz
+        case 6: zb0=(0*za0+1*za1+0*za2)+(110L*zb1-62L*zb2)/64; break; //600Hz+-50Hz
+        case 7: zb0=(0*za0+1*za1+0*za2)+(110L*zb1-61L*zb2)/64; break; //600Hz+-18Hz
+        //case 8: zb0=(0*za0+1*za1+0*za2)+(110L*zb1-60L*zb2)/64; break; //591Hz+-12Hz
+
+        /*case 4: zb0=(0*za0+1*za1+0*za2)+2*zb1-zb2+(-14L*zb1+7L*zb2)/64; break; //600Hz+-250Hz
+        case 5: zb0=(0*za0+1*za1+0*za2)+2*zb1-zb2+(-15L*zb1+4L*zb2)/64; break; //600Hz+-100Hz
+        case 6: zb0=(0*za0+1*za1+0*za2)+2*zb1-zb2+(-14L*zb1+2L*zb2)/64; break; //600Hz+-50Hz
+        case 7: zb0=(0*za0+1*za1+0*za2)+2*zb1-zb2+(-14L*zb1+3L*zb2)/64; break; //600Hz+-18Hz*/
+      }
+    
+      switch(filt){
+        //case 4: zc0=(zb0-2*zb1+zb2)/4+(95L*zc1-44L*zc2)/64; break; //600Hz+-250Hz
+        //case 5: zc0=(zb0-2*zb1+zb2)/8+(104L*zc1-53L*zc2)/64; break; //600Hz+-100Hz
+        //case 6: zc0=(zb0-2*zb1+zb2)/16+(106L*zc1-56L*zc2)/64; break; //600Hz+-50Hz
+        //case 7: zc0=(zb0-2*zb1+zb2)/32+(112L*zc1-62L*zc2)/64; break; //600Hz+-25Hz
+        
+        case 4: zc0=(zb0-2*zb1+zb2)/1+(95L*zc1-52L*zc2)/64; break; //600Hz+-250Hz
+        case 5: zc0=(zb0-2*zb1+zb2)/4+(106L*zc1-59L*zc2)/64; break; //600Hz+-100Hz
+        case 6: zc0=(zb0-2*zb1+zb2)/16+(113L*zc1-62L*zc2)/64; break; //600Hz+-50Hz
+        case 7: zc0=(zb0-2*zb1+zb2)/32+(112L*zc1-62L*zc2)/64; break; //600Hz+-18Hz
+        //case 8: zc0=(zb0-2*zb1+zb2)/64+(113L*zc1-63L*zc2)/64; break; //591Hz+-12Hz
+        
+        /*case 4: zc0=(zb0-2*zb1+zb2)/1+zc1-zc2+(31L*zc1+12L*zc2)/64; break; //600Hz+-250Hz
+        case 5: zc0=(zb0-2*zb1+zb2)/4+2*zc1-zc2+(-22L*zc1+5L*zc2)/64; break; //600Hz+-100Hz
+        case 6: zc0=(zb0-2*zb1+zb2)/16+2*zc1-zc2+(-15L*zc1+2L*zc2)/64; break; //600Hz+-50Hz
+        case 7: zc0=(zb0-2*zb1+zb2)/16+2*zc1-zc2+(-16L*zc1+2L*zc2)/64; break; //600Hz+-18Hz*/
+      } 
+    }
+    zc2=zc1;
+    zc1=zc0;
+  
+    zb2=zb1;
+    zb1=zb0;
+  
+    za2=za1;
+    za1=za0;
+    
+    //return zc0 / 64; // compensate the 64x front-end gain
+    return zc0 / 8; // compensate the front-end gain
+  }
+}
+
+#define __UA   256
+inline int16_t _arctan3(int16_t q, int16_t i)
+{
+  #define __atan2(z)  (__UA/8  + __UA/22) * z  // very much of a simplification...not accurate at all, but fast
+  //#define __atan2(z)  (__UA/8 - __UA/22 * z + __UA/22) * z  //derived from (5) [1]
+  int16_t r;
+  if(abs(q) > abs(i))
+    r = __UA / 4 - __atan2(abs(i) / abs(q));        // arctan(z) = 90-arctan(1/z)
+  else
+    r = (i == 0) ? 0 : __atan2(abs(q) / abs(i));   // arctan(z)
+  r = (i < 0) ? __UA / 2 - r : r;                  // arctan(-z) = -arctan(z)
+  return (q < 0) ? -r : r;                        // arctan(-z) = -arctan(z)
+}
+
+static uint32_t absavg256 = 0;
+volatile uint32_t _absavg256 = 0;
+volatile int16_t i, q;
+
+inline int16_t slow_dsp(int16_t ac)
+{
+  static uint8_t absavg256cnt;
+  if(!(absavg256cnt--)){ _absavg256 = absavg256; absavg256 = 0; } else absavg256 += abs(ac);
+
+  if(mode == AM) {
+    ac = magn(i, q);
+    { static int16_t dc;   // DC decoupling
+      dc += (ac - dc) / 2;
+      ac = ac - dc; }
+  } else if(mode == FM){
+    static int16_t zi;
+    ac = ((ac + i) * zi);  // -qh = ac + i
+    zi =i;
+    /*int16_t z0 = _arctan3(q, i);
+    static int16_t z1;
+    ac = z0 - z1; // Differentiator
+    z1 = z0;*/
+    /*static int16_t _q;
+    _q = (_q + q) / 2;
+    ac = i * _q;  // quadrature detector */
+    //ac = ((q > 0) == !(i > 0)) ? 128 : -128; // XOR I/Q zero-cross detector
+  }  // needs: p.12 https://www.veron.nl/wp-content/uploads/2014/01/FmDemodulator.pdf
+  else { ; }  // USB, LSB, CW
+
+#ifdef FAST_AGC
+  if(agc == 2) {
+    ac = process_agc(ac);
+    ac = ac >> (16-volume);
+  } else if(agc == 1){
+    ac = process_agc_fast(ac);
+    ac = ac >> (16-volume);
+#else
+  if(agc == 1){
+    ac = process_agc_fast(ac);
+    ac = ac >> (16-volume);
+#endif //!FAST_AGC
+  } else {
+    //ac = ac >> (16-volume);
+    if(volume <= 13)    // if no AGC allow volume control to boost weak signals
+      ac = ac >> (13-volume);
+    else
+      ac = ac << (volume-13);
+  }
+  if(nr) ac = process_nr(ac);
+
+//  if(filt) ac = filt_var(ac) << 2;
+  if(filt) ac = filt_var(ac);
+/*
+  if(mode == CW){
+    if(cwdec){  // CW decoder enabled?
+      char ch = cw(ac >> 0);
+      if(ch){
+        for(int i=0; i!=15;i++) out[i]=out[i+1];
+        out[15] = ch;
+        cw_event = true;
+      }
+    }
+  }*/
+#ifdef CW_DECODER
+  if(!(absavg256cnt % 64)){ _amp32 = amp32; amp32 = 0; } else amp32 += abs(ac);
+#endif  //CW_DECODER
+  //if(!(absavg256cnt--)){ _absavg256 = absavg256; absavg256 = 0; } else absavg256 += abs(ac);  //hack
+  
+  //static int16_t dc;
+  //dc += (ac - dc) / 2;
+  //dc = (15*dc + ac)/16;
+  //dc = (15*dc + (ac - dc))/16;
+  //ac = ac - dc;    // DC decoupling
+
+  ac = min(max(ac, -512), 511);
+  //ac = min(max(ac, -128), 127);
+#ifdef QCX
+  if(!dsp_cap) return 0;  // in QCX-SSB mode (no DSP), slow_dsp() should return 0 (in order to prevent upsampling filter to generate audio)
+#endif
+  return ac;
+
+}
+
+
+//2871
+
+```
