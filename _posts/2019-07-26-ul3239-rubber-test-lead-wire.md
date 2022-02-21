@@ -10,16 +10,19 @@ tags:
 twitter_text: Rubber Test Lead Wire,
 ---
 
-<p>Description:<br />
-  * Tinned, annealed, stranded or solid copper conductor.<br />
-  * Silicone indulation.<br />
-  * Rated temperature: 200℃, Rated voltage: 3KV/6KV/10KV/20KV.<br />
-  *Uniform thickness of wire to ensure easy stripping and cutting.<br />
-  * Passes UL VW-1&amp;Cul FT1 vertical flame test.<br />
-  Executive Standard:UL758, UL1581,CSA22.2 <br />
-  * Resistant acids,oil,aldalis,moisture and fungus.</p>
-<p>Application:<br />
-* For general pupose internal wiring of electronic and electrical equipment. </p>
+__Description:__
+
+* Tinned, annealed, stranded or solid copper conductor.
+* Silicone indulation.
+* Rated temperature: 200℃, Rated voltage: 3KV/6KV/10KV/20KV.
+* Uniform thickness of wire to ensure easy stripping and cutting.
+* Passes UL VW-1&amp;Cul FT1 vertical flame test.
+* Reference Standard: UL758, UL1581,CSA22.2 
+* Resistant acids,oil,aldalis,moisture and fungus.
+
+__Application:__
+
+* For general pupose internal wiring of electronic and electrical equipment. 
 
 <br/>
 <div class="table-responsive">

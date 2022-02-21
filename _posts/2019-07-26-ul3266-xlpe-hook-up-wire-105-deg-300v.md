@@ -18,7 +18,7 @@ __Description:__
 * Uniform thickness of wire to ensure easy stripping and cutting.
 * Passes UL VW-1&amp;Cul FT1/FT2 vertical flame test or horizontal flame test.
 
-* Reference Standard:UL758, UL1581,CSA22.2 
+* Reference Standard: UL758, UL1581,CSA22.2 
 * Cross-Linked Polyethylene (XLPE) Wire exhibits the following characteristics:
 * Low-Smoke Zero Halogen (LSZH)
 * Excellent Mechanical Strength and Abrasion Resistance
@@ -74,9 +74,3 @@ AWG | Stranded | O.D. | resistance @ 20℃Ω/Km
 * Colors Available:  Black, Red, White, Green.  Please call or click on &quot;Contact Us&quot; above to inquire about other colors. 
 * Reference:
 [UL iQ Style Page : UL 3266](http://iq.ul.com/awm/stylepage.aspx?Style=3266)
-
------
-
-Want to see something else added? <a href="http://hingtak.com/catalog/">Open a Category</a>
-
-
