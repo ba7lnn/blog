@@ -3,23 +3,18 @@ layout: post
 title: "UL 2725 Mult. Core Cable, USB 3.6, USB Rev3.1, SATA cable"
 date: 2019-07-26
 description: USB 3.6, USB Rev3.1, SATA cable
-category: 'cable'
-tags:
-- Cable
-- USB
-- PVC
-twitter_text: USB 3.6, USB Rev3.1, SATA cable
 ---
 
-  <p>Description:<br />
+__Description:__
 * Tinned, annealed, stranded or solid copper conductor.<br />
 * PVC indulation.<br />
 * Rated temperature: 80℃, Rated voltage:30 Volts.<br />
-*Uniform thickness of wire to ensure easy stripping and cutting.<br />
+* Uniform thickness of wire to ensure easy stripping and cutting.<br />
 * Passes UL VW-1&amp;Cul FT1 vertical flame test.<br />
-Executive Standard:UL758, UL1581,CSA22.2 <br />
+* Executive Standard:UL758, UL1581,CSA22.2 <br />
 * Resistant acids,oil,aldalis,moisture and fungus. </p>
-  <p>Application:<br />
+
+__Application:__
     * For general pupose internal wiring of electronic and electrical equipment. <br />
     *　Cash register, timg_recording machines, Electronic and medical equiment. </p>
   <p>&nbsp;</p>
@@ -172,9 +167,4 @@ Executive Standard:UL758, UL1581,CSA22.2 <br />
 <p>Additional constructions to order.</p>
 <p>* Reference: <br />
   1) <a href="http://iq.ul.com/awm/stylepage.aspx?Style=2725" target="_blank">UL iQ Style Page : UL 2725 </a></p>
-
------
-
-Want to see something else added? <a href="http://hingtak.com">Open a Category</a>
-
 

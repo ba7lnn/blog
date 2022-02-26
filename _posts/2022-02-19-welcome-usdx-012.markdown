@@ -9,7 +9,7 @@ categories: USDX
 
 # 012
 
-```
+```c
 /* BACKLOG:
 code definitions and re-use for comb, integrator, dc decoupling, arctan
 refactor main()
