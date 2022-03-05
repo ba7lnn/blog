@@ -4,8 +4,6 @@
 
   <!-- Enable responsiveness on mobile devices-->
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1">
-  <meta name="msvalidate.01" content="{{ site.bing_seo }}" />
-
   <title>
     {% if page.title %}
       {{ page.title }} &middot; {{ site.title }}
@@ -15,10 +13,10 @@
   </title>
 
   <!-- CSS -->
-  <link rel="stylesheet" href="/public/css/poole.css">
+  <link rel="stylesheet" href="/public/css/main.css">
 
-  <!-- Google analytics -->
   {% if site.google_analytics and jekyll.environment == 'production' %}
+  <!-- Google analytics -->
   {% include analytics.html %}
   {% endif %}
 
