@@ -15,11 +15,11 @@ categories: USDX
 
 # 关于项目
 
-这里是[项目地址](https://dl2man.de)
+这里是项目地址: <https://dl2man.de>
 
-芯片的[软件项目](https://github.com/threeme3/QCX-SSB)。
+芯片的软件项目: <https://github.com/threeme3/QCX-SSB>
 
-有问题找[最新的论坛地址](https://forum.dl2man.de/)。
+有问题找最新的论坛地址: <https://forum.dl2man.de/>
 
 
 ```
