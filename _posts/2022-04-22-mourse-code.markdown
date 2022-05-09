@@ -37,3 +37,5 @@ Y |  -.--
 Z |  --..
 ? |  ..--..
 / |  -..-.
+
+![Morse Code](/assets/2022/mouse-code.jpg "Morse Code")
