@@ -85,5 +85,3 @@ void word_display()
 
 }
 ```
-
-Arduino UNO 下测试通过
