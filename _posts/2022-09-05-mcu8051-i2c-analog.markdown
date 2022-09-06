@@ -1,0 +1,159 @@
+---
+layout: post
+title:  8051单片机实现I2C总线的读写
+date:   2022-09-05 13:24:02
+---
+
+I2C总线包括SCL,SDA 两根信号线，其中SCL是时钟线，SDA是数据线。
+对于I2C总线的操作，主要有以下几个命令：
+1、开始命令：
+I2C总线开始的操作过程是通过SCL为高的时候SDA有个下降沿的过程；
+2、停止命令：
+I2C停止的的操作过程是通过SCL为高的时候SDA有个上升沿的过程；
+3、读写数据
+I2C读写每一位数据都是在SCL为高的时候完成的，读写每一位数据的时候SCL都有一个高脉冲的过程，也就是说，在SCL为高的时候我们读写SDA的值，这意味着在SCL拉高之前，SDA必须为一稳定的值，不然读写就不准确；
+4、写完从器件之后等待从器件的应答：
+在主器件完成对从器件的写操作时候（每次会有一个字节的数据），主器件会等待从器件发送指示信号，这个指示信号是说从器件已经接受到了主器件的数据，这是由从器件的硬件来完成的，不需要主器件来软件操作，只需要等待；
+4、主器件读完数据后向从器件发送应答信号：
+这其实包括两种情况，一种是主器件读完后还要继续读就要发送一个继续读的信号（其实就是发送0），另一种就是不再继续读了，就要发送停止读信号（其实就是发送1）。
+
+```
+
+#define uchar unsigned char
+#define uint  unsigned int
+
+void delay()
+{
+  uint i;
+  for(i=0;i<300;i++);
+  for(i=0;i<300;i++);
+}  
+//开始
+void I2C_START()
+{
+  SDA = 1;
+  SCL = 1;
+  delay();
+  SDA = 0;
+  delay();
+}
+//停止
+void I2C_STOP()
+{
+  SDA = 0;
+  SCL = 1;
+  delay();
+  SDA = 1;
+  delay();
+}
+//写完等待从器件应答
+bit write_ACK(void)
+{
+  uchar i;
+  SCL = 1;
+  delay();
+  i = SDA;
+  SCL = 0;
+  delay(); 
+  if(i==1) return 0;
+  else return 1;
+}
+//读完发送停止读的信号
+void NACK()
+{
+  uchar j;
+  SDA = 1;
+  delay();
+  SCL = 1;
+  delay();
+  while((SDA==0)&&(j<250)) j++;
+  SCL = 0;
+  delay();
+}
+
+//写字节
+void I2C_writebyte(uchar dat_w)
+{
+  uint i;
+  uchar tmp;
+  tmp = dat_w;
+  SCL = 0;
+  delay();
+  for(i=0;i<8;i++)
+    {
+  if((tmp<<i)&0x80)
+    SDA = 1;
+  else SDA = 0;
+    delay();
+SCL = 1;
+delay();
+SCL = 0;
+delay();
+}
+SDA = 1;
+delay();
+}
+//读字节
+uchar I2C_readbyte()
+{
+  uchar i;
+  uchar dat_r,k;
+  SCL = 0;
+  delay();
+  SDA = 1;
+  delay();
+  for(i=0;i<8;i++)
+    {
+  SCL = 0;
+  delay();
+  SCL = 1;
+  delay();
+  k = SDA;
+  dat_r = (dat_r<<1)|k;
+  SCL = 0;
+  delay();
+}  
+return dat_r;
+}
+//写地址及数据
+void I2C_write_add(uchar slave_add, uchar byte_add, uchar dat_w)
+{
+  I2C_START();
+  I2C_writebyte(slave_add);
+  write_ACK();
+  I2C_writebyte(byte_add);
+  write_ACK();
+  I2C_writebyte(dat_w);
+  write_ACK();
+  I2C_STOP();
+}
+//读地址的数据
+uchar I2C_read_add(uchar slave_add, uchar byte_add)
+{
+  uchar dat_r;
+  I2C_START();
+  I2C_writebyte(slave_add);
+  write_ACK();
+  I2C_writebyte(byte_add);
+  write_ACK();
+  I2C_START();
+  I2C_writebyte((slave_add+1));
+  write_ACK();
+  dat_r = I2C_readbyte();
+  NACK();
+  I2C_STOP();
+  return dat_r;
+}
+
+void main()
+{
+   SDA = 1;
+   SCL = 1;
+   I2C_write_add(0xa0,0x23,0x51);
+   P1 = I2C_read_add(0xa0,0x23);
+   while(1);
+}
+
+```
+
+很简单的实验，可以在proteus中仿真实验
