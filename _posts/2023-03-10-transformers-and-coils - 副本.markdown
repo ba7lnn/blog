@@ -1,8 +1,8 @@
-===
+---
 layout: post
 title:  Transformers and coils
 date: 2023-03-10 17:51:01 -0700
-===
+---
 
 There are many electronicians, both hobby and professional, who are at war with electromagnetism. Whenever they need to design a coil or a transformer, an abyss of desperation opens in front of these poor people. The worst thing is that usually these poor victims are not really at fault, since the authors of electronic textbooks seem to have struck a plot to explain these things in such a messy way that nobody can really understand them! Or maybe these authors themselves didn't have a clue about the matter?
 Well, internet to the rescue! I will explain the basics, in simple, understandable terms, taking some freedom in regard to standard physics notation. Here you will find most information required to design electromagnetic parts for electronic use.
