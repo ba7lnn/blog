@@ -17,7 +17,7 @@ If you are intended to count the clock pulses of the external clock source then 
 
 Timer/ Counter 0
 
-![attiny85-pin-diagram-e1610428687807.png](/assets/2025/attiny85-pin-diagram-e1610428687807.png)
+![attiny85-pin-diagram.png](/assets/2025/attiny85-pin-diagram.png)
 
 There are two timer/counter peripherals in ATtiny85 Timer0/counter 0 and Timer1/counter 1. In this tutorial we are going to use Timer0 and configure it as counter of external events. It is a 8 bit register which means it can count from 0 to 255.
 

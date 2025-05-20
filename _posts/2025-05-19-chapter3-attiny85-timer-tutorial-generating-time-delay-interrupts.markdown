@@ -86,7 +86,7 @@ This register holds the bits which indicates the status of Timer0 peripheral. Al
 
 In this method the program needs to check the overflow flag and wait for it to go high. It means the code have to be idle in the meantime or there is a good chance the code will miss reading the timer status because upon overflow Timer TCNT0 register will start over again from 0 to 255. This is the disadvantage of using this method.
 
-![attiny85-pin-diagram-e1610428687807.png](/assets/2025/attiny85-pin-diagram-e1610428687807.png)
+![attiny85-pin-diagram.png](/assets/2025/attiny85-pin-diagram.png)
 
 Steps to configure Timer and use Overflow flag to generate delay:
 Select the normal mode of operation for timer0

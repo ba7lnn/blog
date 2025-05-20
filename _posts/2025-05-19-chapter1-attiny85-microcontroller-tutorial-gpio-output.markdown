@@ -7,7 +7,7 @@ date: 2025-05-19 17:35:00 -0700
 This article describes a 64x48 monochrome OLED display based on an ATtiny85. I've included three sample applications: a simple oscilloscope, a wireframe animation, and an analogue voltmeter:
 
 
-![attiny85-pinout.png](/assets/2025/attiny85-pinout.png "attiny85 pinout")
+![attiny85-pin-diagram.png](/assets/2025/attiny85-pin-diagram.png "attiny85 pinout")
 
 If you are making a hardware project that requires a microcontroller, don’t just go for MCU that’s lying around. Choose Microcontroller that’s fit for the job. Don’t go for a 32 bit MCU when all you need to do is take input from a sensor. In this tutorial we are going to discuss ATtiny85 which is a good thing that comes in small package. This microcontroller is loaded with functionality but comes in a small package as DIP8 thus enabling you to reduce your board size still offering great performance.
 
