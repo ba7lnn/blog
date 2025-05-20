@@ -18,17 +18,17 @@ Core registers used in configuring ATtiny85 microcontroller
 ATtiny85 :
 It is based on Atmel Attiny85 MCU. Talking about the size this is almost 1/3 of the size of an Arduino nano but offers quite a few specs as compared to Arduino uno. ATtiny85 is a 8 pin IC out of which 6 pins are GPIO pins, 2 power pins. And unlike Atmega328p IC it doesn’t require any extra passive components to function. Specifications of ATtiny85 includes
 
-* 6 I/O pins
-* Timers
-* Counters
-* Compare match
-* PWM on 3 pins (P0, P1 and P4)
-* ADC on 4 pins (P2 to P5)
-* Analog comparator
-* External Interrupt on pin P2
-* SPI protocol
-* I2C protocol
-* Sleep modes
+* [6 I/O pins](chapter2-attiny85-gpio-input.html)
+* [Timers](chapter3-attiny85-timer-tutorial-generating-time-delay-interrupts.html)
+* [Counters](chapter4-attiny85-counter-counting-events-signals-interrupts.html)
+* [Compare match](chapter5-attiny85-compare-match-tutorial-interrupts.html)
+* [PWM on 3 pins (P0, P1 and P4)](chapter6-attiny85-pwm-tutorial-phase-correct-fast-mode.html)
+* [ADC on 4 pins (P2 to P5)](chapter7-attiny85-adc-tutorial-interrupts.html)
+* [Analog comparator](chapter8-attiny85-analog-comparator.html)
+* [External Interrupt on pin P2](chapter9-attiny85-external-pin-change-interrupt.html)
+* [SPI protocol](chapter11-attiny85-spi-protocol-master-slave-mode-tutorial.html)
+* [I2C protocol](chapter12-attiny85-i2c-protocol-tutorial.html)
+* [Sleep modes](chapter10-attiny85-sleep-modes-tutorial.html)
 
 You can look into its datasheet to know more about this IC.
 

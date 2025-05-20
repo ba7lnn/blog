@@ -31,7 +31,6 @@ Similarly we need to define the pin 3 or PB4 as an output pin. Therefore the DDB
 
 DDRB |= (1 << PB4); // Set the pin PB4 as output
 
-Circuits Library - 220+ practical circuits
 PORTB register: 
 Now that we have configured the pins, we need to read the logic input from the input pin PB3. For that purpose we use PORTB register. PB3 is an Input pin, therefore we can not leave the pin floating when neither high nor low logic level are connected to it. So we need to activate the internal pull up resistor of this pin. To do that,
 

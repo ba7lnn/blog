@@ -44,25 +44,25 @@ Day 6:
 
 Conversion of Analog signal to Digital signals using ADC feature in ATtiny85 MCU and its limitations.
 
-* ATtiny85 ADC with interrupts
+* [ATtiny85 ADC with interrupts](chapter7-attiny85-adc-tutorial-interrupts.html)
 
 Day 7:
 
 What is Analog comparator, how to use it to compare two signals with different amplitude.
 
-* ATtiny85 : Analog comparator tutorial
+* [ATtiny85 : Analog comparator tutorial](chapter8-attiny85-analog-comparator.html)
 
 Day 8:
 
 What is interrupts ? Configuration of External and Pin change interrupt in ATtiny85 microcontroller.
 
-* ATtiny85 : External and Pin change interrupt tutorial
+* [ATtiny85 : External and Pin change interrupt tutorial](chapter9-attiny85-external-pin-change-interrupt.html)
 
 Day 9:
 
 What is Sleep mode ? Why sleep mode is important to save power for prototypes and projects. Types of sleep modes in ATtiny85 microcontroller.
 
-* ATtiny85 sleep modes
+* [ATtiny85 sleep modes](chapter10-attiny85-sleep-modes-tutorial.html)
 
 Day 10:
 
