@@ -20,9 +20,6 @@ I recently wanted a flexible way of displaying information from a project, and f
 
 The display needs 4 pins to drive it, just within the capabilities of the ATtiny85 and leaving one pin available for another application. You can't read the display memory, so to do graphics you need to write into a buffer in RAM, and then copy this to the display. Because the display is 64x48 pixels it requires 64x48/8 or 384 bytes of memory for the graphics buffer, again just within the capabilities of the ATtiny85.
 
-Here's the circuit:
-
-GraphicsDisplay.gif
 
 Circuit of the 64x48 OLED graphics display based on an ATtiny85.
 
@@ -91,7 +88,6 @@ void InitDisplay () {
 Plotting points
 I wrote some basic graphics routines for plotting points and drawing lines. These work on a conventional coordinate system with the origin at lower left:
 
-GraphicsDisplayCoords.gif
 
 You can move the origin by changing xOrigin and yOrigin; for example, to have the origin in the centre do:
 
