@@ -68,5 +68,5 @@ Day 10:
 
 Configuration and using SPI protocol in ATtiny85 microcontroller to communicate with other microcontrollers, sensor modules, displays etc.
 
-* ATtiny85 : SPI protocol – Master and Slave modes
-* ATtiny85 : I2C protocol – Master and Slave modes
+* [ATtiny85 : SPI protocol – Master and Slave modes](chapter11-attiny85-spi-protocol-master-slave-mode-tutorial.html)
+* [ATtiny85 : I2C protocol – Master and Slave modes](chapter12-attiny85-i2c-protocol-tutorial.html)
