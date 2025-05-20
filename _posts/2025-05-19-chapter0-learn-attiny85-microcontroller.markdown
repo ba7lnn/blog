@@ -20,25 +20,25 @@ Day 2:
 
 What is Timer feature in a ATtiny85 microcontroller and how to configure them and use it with interrupts to generate time delay.
 
-* ATtiny85 : Using timers & Interrupts to generate time delay
+* [ATtiny85 : Using timers & Interrupts to generate time delay](chapter3-attiny85-timer-tutorial-generating-time-delay-interrupts.html)
 
 Day 3:
 
 What is counters ? How it is related to timer peripheral. Guide to configure counter in ATtiny85 microcontroller and use it to count events, signals, clock pulses etc.
 
-* ATtiny85 : Using counters & Interrupts to count events and signals
+* [ATtiny85 : Using counters & Interrupts to count events and signals](chapter4-attiny85-counter-counting-events-signals-interrupts.html)
 
 Day 4:
 
 What is compare match feature ? Advantages of using compare match with timers. Guide to configure compare match and use it with interrupts in ATtiny85 microcontroller.
 
-* ATtiny85 : Compare match with interrupts
+* [ATtiny85 : Compare match with interrupts](chapter5-attiny85-compare-match-tutorial-interrupts.html)
 
 Day 5:
 
 Pulse width modulation or PWM pulse generation in ATtiny85 microcontroller. There are two modes : Fast PWM and Phase correct PWM each has unique characteristics.
 
-* ATtiny85 PWM : Fast and Phase correct PWM modes
+* [ATtiny85 PWM : Fast and Phase correct PWM modes](chapter6-attiny85-pwm-tutorial-phase-correct-fast-mode.html)
 
 Day 6:
 
